@@ -45,5 +45,5 @@ def statistics(day, tolerance, id):
     belongto = stockBelongs(id)
     if(belongto == "0"):
         return
-    while(dayIDx < day):
+    #while(dayIDx < day):
         
