@@ -6,6 +6,7 @@ This is a temporary script file.
 """
 import tushare as ts
 import time
+import string
 
 def logError(str):
     file_error = open("error.txt", "a+")
@@ -14,21 +15,22 @@ def logError(str):
     file_error.close()
 
 def stockBelongs(id):
-    if(id[1:3] == "60"):
+    if(id[0:2] == "60"):
         return "000001"
-    elif(id[1:3] == "00"):
+    elif(id[0:2] == "00"):
         return "399001"
-    elif(id[1:3] == "30"):
+    elif(id[0:2] == "30"):
         return "399006"
     else:
         logError("未知股票市场id：" + id)
         return "0"
 
-def belongToHist(day, id):
+def belongToHist(dayCalcIdx, id):
     while(True):
-        preTime = time.localtime(time.time() - day * 86400)
+        preTime = time.localtime(time.time() - dayCalcIdx * 86400)
         formatPreTime = time.strftime("%Y-%m-%d", preTime)
         print("获取:" + id + "在" + formatPreTime + "的数据")
+        print("day" + str(dayCalcIdx))
         history = ts.get_h_data(id, \
                             start = formatPreTime, \
                             end = formatPreTime, \
@@ -36,7 +38,7 @@ def belongToHist(day, id):
                             index = True)
         if (history is None):
             print("fuck")
-            day += 1
+            dayCalcIdx += 1
             continue 
         return history
 
@@ -54,17 +56,20 @@ def statistics(day, tolerance, id):
         formatPreTime = time.strftime("%Y-%m-%d", preTime)
 
         belongToHistory = belongToHist(dayCalcIdx, belongto)
-        belongToHistory1 = belongToHist(dayCalcIdx1, belongto)
+        dayCalcIdx += 1
+        print("get history 1: " + str(dayCalcIdx))
+        belongToHistory1 = belongToHist(dayCalcIdx, belongto)
         
         begin = belongToHistory1["close"]
         end = belongToHistory["close"]
         percentChg = (float(end) - float(begin)) / float(begin)
-        print("percentChg" + percentChg)
+        print("percentChg")
+        print(percentChg)
         stockHist = ts.get_hist_data(id, \
                                     start = formatPreTime,\
                                     end = formatPreTime)
-        
-        compareStock = int(float(stockHist["p_change"]) * 100)
+        print(stockHist["p_change"])
+        compareStock = int( string.atof(stockHist["p_change"]) * 100)
         compareBelongto = int(float(percentChg) * 10000)
         print("时间: " + formatPreTime + "个股:" + compareStock \
                     + "   大盘:" + compareBelongto)
