@@ -29,14 +29,13 @@ def belongToHist(dayValue, dayIdx, id):
     while(True):
         preTime = time.localtime(time.time() - dayValue[dayIdx] * 86400)
         formatPreTime = time.strftime("%Y-%m-%d", preTime)
-        print("获取:" + id + "在" + formatPreTime + "的数据")
         history = ts.get_h_data(id, \
                             start = formatPreTime, \
                             end = formatPreTime, \
                             pause=0.01, \
                             index = True)
-        if (history is None):
-            print("fuck")
+        if (history is None or history.empty):
+            print(formatPreTime + "休市")
             dayValue[dayIdx] += 1
             continue 
         return history
@@ -53,29 +52,33 @@ def statistics(day, tolerance, id):
         return
     while(dayIdx < day):
         belongToHistory = belongToHist(dayValue, dayCalcIdx, belongto)        
-        print("get history end: " + str(dayValue[dayCalcIdx]))
+        
         dayValue[dayCalcIdx1] = dayValue[dayCalcIdx] + 1
-        print("get history 1: " + str(dayValue[dayCalcIdx1]))
+        
         belongToHistory1 = belongToHist(dayValue, dayCalcIdx1, belongto)
-        print("get history 1 end: " + str(dayValue[dayCalcIdx1]))
+        
         
         begin = belongToHistory1["close"]
         end = belongToHistory["close"]
-        percentChg = (float(end) - float(begin)) / float(begin)
-        print("percentChg")
-        print(percentChg)        
+        percentChg = (float(end) - float(begin)) / float(begin)       
         
         preTime = time.localtime(time.time() - dayValue[dayCalcIdx] * 86400)
         formatPreTime = time.strftime("%Y-%m-%d", preTime)
         stockHist = ts.get_hist_data(id, \
                                     start = formatPreTime,\
                                     end = formatPreTime)
-        print(stockHist.get_value(formatPreTime, "p_change"))
-        compareStock = int( string.atof(stockHist["p_change"]) * 100)
+        if (stockHist is None or stockHist.empty):
+            print(id + formatPreTime + "停牌")
+            dayIdx += 1
+            dayValue[dayCalcIdx] = dayValue[dayCalcIdx1]
+            dayValue[dayCalcIdx1] += 1
+            continue
+        
+        compareStock = int( string.atof(stockHist.get_value(    \
+                        formatPreTime, "p_change") * 100))
         compareBelongto = int(float(percentChg) * 10000)
-        print("时间: " + formatPreTime)
-        print("个股:" + str(compareStock))
-        print("大盘:" + str(compareBelongto))
+        print("时间: " + formatPreTime + "个股涨跌:" + str(compareStock) \
+                + "大盘涨跌:" + str(compareBelongto))
         isWeNeed = compareStock > compareBelongto
         if(not isWeNeed):
             break
@@ -85,7 +88,7 @@ def statistics(day, tolerance, id):
         dayValue[dayCalcIdx1] += 1
     if (isWeNeed):
         file_result.write(id + " ")
-        print("符合筛选条件")
+        print(id+ "符合筛选条件")
 
 file_obj = open("AllStock.txt")
 try:
@@ -97,8 +100,11 @@ file_stock_id = open("AllStockID.txt", "w+")
 file_result = open("result.txt", "a+")
 resultTime = time.localtime(time.time())
 formatRestultTime = time.strftime("%Y-%m-%d %H:%M:%S", resultTime)
-file_result.write(formatRestultTime);
-file_result.write("\n");
+file_result.write("--------------------------------------\n")
+file_result.write(formatRestultTime)
+file_result.write("\n")
+file_result.write("统计最近5日股票涨跌信息")
+file_result.write("\n")
 
 #print ts.get_h_data('399001', start = "2016-06-17", end = "2016-06-17", index=True)
 #print ts.get_hist_data("600000")
@@ -107,7 +113,7 @@ for line in all_text_lines:
     sections = line.split(' ')
     file_stock_id.write(sections[1][1:7])
     file_stock_id.write("\n")
-    statistics(3, 0, sections[1][1:7])
+    statistics(5, 0, sections[1][1:7])
 
 file_stock_id.close()
 file_obj.close()
