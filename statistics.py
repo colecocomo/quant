@@ -39,6 +39,45 @@ def belongToHist(dayValue, dayIdx, id):
             dayValue[dayIdx] += 1
             continue 
         return history
+        
+def timeRegion(timeValue, regionNum, timeDict):
+    timeIdx = 0
+    endTimeIdx = 1
+    while(True):
+        endTime = time.localtime(time.time() - endTimeIdx * 86400)
+        formatEndTime= time.strftime("%Y-%m-%d", endTime)
+        history = ts.get_h_data("000001", \
+                                start = formatEndTime, \
+                                end = formatEndTime, \
+                                index = True)
+        if (history is None or history.empty):
+            print("timeRegion: get end time" + formatEndTime + "休市")
+            endTimeIdx += 1
+            continue
+        timeValue[1] = formatEndTime
+        timeDict["1"] = formatEndTime
+        break
+    
+    startTimeIdx = endTimeIdx + 1
+    while(True):
+        startTime = time.localtime(time.time() - startTimeIdx * 86400)
+        formatStartTime= time.strftime("%Y-%m-%d", startTime)
+        history = ts.get_h_data("000001", \
+                                start = formatStartTime, \
+                                end = formatStartTime, \
+                                index = True)
+        if (history is None or history.empty):
+            print("timeRegion: get start time" + formatStartTime + "休市")
+            startTimeIdx += 1
+            continue
+        timeValue[0] = formatStartTime
+        timeIdx += 1
+        timeDict[str(timeIdx + 1)] = formatStartTime
+        startTimeIdx += 1
+        if(timeIdx > regionNum):
+            break
+    print("timeDict")
+    print(timeDict)
 
 def statistics(day, tolerance, id):
     dayIdx = 0
@@ -50,6 +89,41 @@ def statistics(day, tolerance, id):
     print("开始统计:" + id)
     if(belongto == "0"):
         return
+    timeValue = ["", ""]
+    timeDict = {}
+    timeRegion(timeValue, day, timeDict)
+    shHistory = ts.get_h_data("000001", \
+                        start = timeValue[0], \
+                        end = timeValue[1], \
+                        index = True)
+    shPercentChg = {}
+    idx = 0
+    print(shHistory)
+    while(True):
+        key = timeDict[str(idx + 1)]
+        preKey = timeDict[str(idx + 2)]
+        print(key)
+        openValue = string.atof(shHistory.get_value(key, "close"))
+        closeValue = string.atof(shHistory.get_value(preKey, "close"))
+        value = (float(openValue) - float(closeValue)) / float(closeValue)
+        print("shPercentChg")
+        print(value)
+        shPercentChg[key] = value
+        idx += 1
+        if(idx > day -1):
+            break
+    szHistory = ts.get_h_data("399001", \
+                        start = timeValue[0], \
+                        end = timeValue[1], \
+                        index = True)
+    cybHistory = ts.get_h_data("399006", \
+                        start = timeValue[0], \
+                        end = timeValue[1], \
+                        index = True)
+    stockHistory = ts.get_hist_data(id, \
+                        start = timeValue[0], \
+                        end = timeValue[1])
+    print(stockHistory[0])
     while(dayIdx < day):
         belongToHistory = belongToHist(dayValue, dayCalcIdx, belongto)        
         
