@@ -103,7 +103,7 @@ formatRestultTime = time.strftime("%Y-%m-%d %H:%M:%S", resultTime)
 file_result.write("--------------------------------------\n")
 file_result.write(formatRestultTime)
 file_result.write("\n")
-file_result.write("统计最近5日股票涨跌信息")
+file_result.write("统计最近10日股票涨跌信息")
 file_result.write("\n")
 
 #print ts.get_h_data('399001', start = "2016-06-17", end = "2016-06-17", index=True)
@@ -113,7 +113,7 @@ for line in all_text_lines:
     sections = line.split(' ')
     file_stock_id.write(sections[1][1:7])
     file_stock_id.write("\n")
-    statistics(5, 0, sections[1][1:7])
+    statistics(10, 0, sections[1][1:7])
 
 file_stock_id.close()
 file_obj.close()
