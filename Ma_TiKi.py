@@ -5,6 +5,7 @@ Created on Wed Jun 22 16:12:28 2016
 @author: colec
 """
 import tushare as ts
+import pandas as pd
 import time
 import csv
 
@@ -30,8 +31,11 @@ spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercen
 all_stock = file_stock_id.readlines()
 curTime = time.localtime(time.time())
 formatCurTime = time.strftime("%Y-%m-%d", curTime)
-endTime = time.localtime(time.time() - 35 * 86400)
+endTime = time.localtime(time.time() - 30 * 86400)
 formatEndTime = time.strftime("%Y-%m-%d", endTime)
+
+dates = pd.bdate_range(end= formatCurTime, periods = 30, freq="B")
+print(dates)
 
 for stock in all_stock:
     stockID = stock[0:6]
@@ -44,7 +48,7 @@ for stock in all_stock:
         file_result.write(stockID + "停牌")
         file_result.write("\n")
         continue
-    print(stockInfo)
+    print(stockInfo.at[dates[0], 'close'])
     dayCnt = 0
     idx = 0
     sumPrice = 0
@@ -52,22 +56,23 @@ for stock in all_stock:
     ma5 = 0
     ma10 = 0
     ma20 = 0
-    while(idx < 35):
+    while(idx < 30):
         sumTime = time.localtime(time.time() - (idx + 1) * 86400)
         formatSumTime = time.strftime("%Y-%m-%d", sumTime)
-        curPrice = int(stockInfo.get_value(formatSumTime, "close") * 100) 
+        curPrice = int(stockInfo.at[dates[idx], "close"] * 100) 
         if(curPrice is None or curPrice == 0):
             idx += 1
             continue
         sumPrice += curPrice
         dayCnt += 1
+        idx += 1
         if(dayCnt == 5):
             ma5 = int(sumPrice / 5)
         if(dayCnt == 10):
             ma5 = int(sumPrice / 10)
         if(dayCnt == 20):
             ma5 = int(sumPrice / 20)
-    curPrice = float(stockInfo.get_value(formatCurTime, "close"))
+    curPrice = float(stockInfo.get_value[formatCurTime]["close"])
 
     if(ma5 == 0):
         ma5 = curPrice
