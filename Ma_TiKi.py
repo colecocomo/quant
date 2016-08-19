@@ -24,6 +24,11 @@ file_result.write("maDiffPercent10        ")
 file_result.write("maDiffPercent20        ")
 file_result.write("\n")
 
+
+tmp = 'sdfsdfsdf '
+tmp.rstrip(' ')
+print("测试" + tmp)
+
 file_csv = open('ma_TiKi.csv', 'wb+')
 spamwriter = csv.writer(file_csv,dialect='excel')
 spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercent20'])
