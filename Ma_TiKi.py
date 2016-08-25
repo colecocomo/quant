@@ -9,7 +9,6 @@ import pandas as pd
 import time
 import csv
 
-file_stock_id = open("AllStockID.txt", "r")
 file_result = open("ma_TiKiResult.txt", "a+")
 resultTime = time.localtime(time.time())
 formatResultTime = time.strftime("%Y-%m-%d %H:%M:%S", resultTime)
@@ -24,16 +23,12 @@ file_result.write("maDiffPercent10        ")
 file_result.write("maDiffPercent20        ")
 file_result.write("\n")
 
-
-tmp = 'sdfsdfsdf '
-tmp.rstrip(' ')
-print("测试" + tmp)
-
 file_csv = open('ma_TiKi.csv', 'wb+')
 spamwriter = csv.writer(file_csv,dialect='excel')
-spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercent20'])
+spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercent20', "dayCnt"])
 
-all_stock = file_stock_id.readlines()
+all_stock = ts.get_stock_basics()
+
 curTime = time.localtime(time.time())
 formatCurTime = time.strftime("%Y-%m-%d", curTime)
 endTime = time.localtime(time.time() - 30 * 86400)
@@ -41,19 +36,19 @@ formatEndTime = time.strftime("%Y-%m-%d", endTime)
 
 dates = pd.bdate_range(end= formatCurTime, periods = 30, freq="B")
 print(dates)
+datesList = dates.tolist()
+print(datesList[0].to_datetime())
 
-for stock in all_stock:
-    stockID = stock[0:6]
-    print("开始统计"+stockID)
-    stockInfo = ts.get_h_data(stockID, \
-                                start = formatEndTime, \
-                                end = formatCurTime)
+for code, stockRow in all_stock.iterrows():
+    print("开始统计"+code)
+    stockInfo = ts.get_h_data(code, \
+                                start = str(datesList[0].to_datetime()), \
+                                end = str(datesList[29].to_datetime()))
     if (stockInfo is None or stockInfo.empty):
-        print(stockID + "停牌")
-        file_result.write(stockID + "停牌")
+        print(code + "停牌")
+        file_result.write(code + "停牌")
         file_result.write("\n")
         continue
-    print(stockInfo.at[dates[0], 'close'])
     dayCnt = 0
     idx = 0
     sumPrice = 0
@@ -62,10 +57,18 @@ for stock in all_stock:
     ma10 = 0
     ma20 = 0
     while(idx < 30):
-        sumTime = time.localtime(time.time() - (idx + 1) * 86400)
-        formatSumTime = time.strftime("%Y-%m-%d", sumTime)
-        curPrice = int(stockInfo.at[dates[idx], "close"] * 100) 
-        if(curPrice is None or curPrice == 0):
+        curStockInfo = stockInfo.get_value(datesList[idx])
+        if(curStockInfo is None or curStockInfo.emppty()):
+            print(code + "在日期" + datesList[idx] + "停牌")
+            file_result.write(code + "在日期" + dates[idx] + "停牌")
+            file_result.write("\n")
+            idx += 1
+            continue
+        curPrice = int(curStockInfo["close"] * 100) 
+        if(curPrice == 0):
+            print(code + "在日期" + datesList[idx] + "停牌")
+            file_result.write(code + "在日期" + datesList[idx] + "停牌")
+            file_result.write("\n")
             idx += 1
             continue
         sumPrice += curPrice
@@ -74,10 +77,24 @@ for stock in all_stock:
         if(dayCnt == 5):
             ma5 = int(sumPrice / 5)
         if(dayCnt == 10):
-            ma5 = int(sumPrice / 10)
+            ma10 = int(sumPrice / 10)
         if(dayCnt == 20):
-            ma5 = int(sumPrice / 20)
-    curPrice = float(stockInfo.get_value[formatCurTime]["close"])
+            ma20 = int(sumPrice / 20)
+    
+    if(dayCnt < 5):
+        print(code + "开市时间不足5天")
+        file_result.write(code + "开市时间不足5天")
+        file_result.write("\n")
+        continue
+    if(dayCnt < 10):
+        ma10 = ma5
+        ma20 = ma5
+        continue
+    if(dayCnt < 20):
+        ma20 = ma10
+        continue
+            
+    curPrice = float(stockInfo.at[datesList[29]]["close"])
 
     if(ma5 == 0):
         ma5 = curPrice
@@ -101,13 +118,12 @@ for stock in all_stock:
           "    ma20" + str(maDiffPercent20))
           
           
-    spamwriter.writerow([stockID, maDiffPercent5, maDiffPercent10, maDiffPercent20])
+    spamwriter.writerow([code, maDiffPercent5, maDiffPercent10, maDiffPercent20], dayCnt)
     
-    file_result.write(stockID + "    ")
+    file_result.write(code + "    ")
     file_result.write(str(maDiffPercent5) + "    ")
     file_result.write(str(maDiffPercent10) + "    ")
     file_result.write(str(maDiffPercent20) + "    ")
     file_result.write("\n")
 file_csv.close()
 file_result.close()
-file_stock_id.close()
