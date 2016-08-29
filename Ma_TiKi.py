@@ -31,10 +31,10 @@ all_stock = ts.get_stock_basics()
 
 curTime = time.localtime(time.time())
 formatCurTime = time.strftime("%Y-%m-%d", curTime)
-endTime = time.localtime(time.time() - 30 * 86400)
+endTime = time.localtime(time.time() - 86400)
 formatEndTime = time.strftime("%Y-%m-%d", endTime)
 
-dates = pd.bdate_range(end= formatCurTime, periods = 30, freq="B")
+dates = pd.bdate_range(end= formatEndTime, periods = 30, freq="B")
 datesList = dates.tolist()
 
 for code, stockRow in all_stock.iterrows():
@@ -62,13 +62,12 @@ for code, stockRow in all_stock.iterrows():
     idx = 0
     sumPrice = 0
     curPrice = 0
-    ma5 = 0
-    ma10 = 0
-    ma20 = 0
-    print("fuck python")
-    print(stockInfo.head(1))
-    lastDate = stockInfo.head(1).index
-    lastPrice = stockInfo.head(1)["close"]
+    ma5 = 0.0
+    ma10 = 0.0
+    ma20 = 0.0
+    lastDate = ''
+    lastPrice = 0
+    isGetLastDate = False
     for date, stockInfoRow in stockInfo.iterrows():
         if(stockInfoRow is None):
             print(code + "在日期" + date + "停牌")
@@ -83,6 +82,12 @@ for code, stockRow in all_stock.iterrows():
             file_result.write("\n")
             idx += 1
             continue
+
+        if not isGetLastDate:
+            lastDate = str(date)[0:10]
+            lastPrice = curPrice
+            isGetLastDate = True
+        
         sumPrice += curPrice
         dayCnt += 1
         idx += 1
@@ -92,7 +97,7 @@ for code, stockRow in all_stock.iterrows():
             ma10 = int(sumPrice / 10)
         if(dayCnt == 20):
             ma20 = int(sumPrice / 20)
-    print("dayCnt:" + str(dayCnt) + "cruPrict:" + str(lastPrice))
+    #print("dayCnt:" + str(dayCnt) + "cruPrice:" + str(lastPrice) + "sumPrice" + str(sumPrice))
     if(dayCnt < 5):
         print(code + "开市时间不足5天")
         file_result.write(code + "开市时间不足5天")
@@ -103,31 +108,22 @@ for code, stockRow in all_stock.iterrows():
         ma20 = ma5
     if(dayCnt < 20):
         ma20 = ma10
-
-    if(ma5 == 0):
-        ma5 = lastPrice
-    else:
-        ma5 = float(ma5 / 100)
-    if(ma10 == 0):
-        ma10 = lastPrice
-    else:
-        ma10 = float(ma10 / 100)
-    if(ma20 == 0):
-        ma20 = lastPrice
-    else:
-        ma20 = float(ma20 / 100)
+        
+    #print("ma5 " + str(ma5) + \
+    #      "    ma10 " + str(ma10) + \
+    #      "    ma20 " + str(ma20))
     
-    maDiffPercent5 = (ma5 - lastPrice) / lastPrice * 100
-    maDiffPercent10 = (ma10 - lastPrice) / lastPrice * 100
-    maDiffPercent20 = (ma20 - lastPrice) / lastPrice * 100
+    maDiffPercent5 = float(ma5 - lastPrice) / float(lastPrice) * 100
+    maDiffPercent10 = float(ma10 - lastPrice) / float(lastPrice) * 100
+    maDiffPercent20 = float(ma20 - lastPrice) / float(lastPrice) * 100
     
-    print("ma5 " + str(maDiffPercent5) + \
-          "    ma10" + str(maDiffPercent10) + \
-          "    ma20" + str(maDiffPercent20))
+    #print("ma5 " + str(maDiffPercent5) + \
+    #      "    ma10" + str(maDiffPercent10) + \
+    #      "    ma20" + str(maDiffPercent20))
          
     curStatus = "正常"
-    print(lastDate)
-    print(formatCurTime)
+    #print(lastDate)
+    #print(formatCurTime)
     if(lastDate != formatCurTime):
         curStatus = "停牌"
           
