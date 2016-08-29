@@ -36,6 +36,8 @@ formatEndTime = time.strftime("%Y-%m-%d", endTime)
 
 dates = pd.bdate_range(end= formatEndTime, periods = 30, freq="B")
 datesList = dates.tolist()
+actualEndTime = datesList[29].to_datetime()
+actualEndTime = str(actualEndTime)[0:10]
 
 for code, stockRow in all_stock.iterrows():
     print("开始统计"+code)
@@ -124,7 +126,8 @@ for code, stockRow in all_stock.iterrows():
     curStatus = "正常"
     #print(lastDate)
     #print(formatCurTime)
-    if(lastDate != formatCurTime):
+    #print(actualEndTime)
+    if(lastDate != actualEndTime):
         curStatus = "停牌"
           
     spamwriter.writerow([code, maDiffPercent5, maDiffPercent10, maDiffPercent20, dayCnt, curStatus.decode('utf-8').encode('gb2312')])
