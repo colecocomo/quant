@@ -25,7 +25,7 @@ file_result.write("\n")
 
 file_csv = open('ma_TiKi.csv', 'wb+')
 spamwriter = csv.writer(file_csv,dialect='excel')
-spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercent20', "dayCnt", "curStatus"])
+spamwriter.writerow(['stock', 'maDiffPercent5', 'maDiffPercent10', 'maDiffPercent20', "dayCnt", "curStatus", "maxVolumePercentRecently"])
 
 all_stock = ts.get_stock_basics()
 
@@ -40,7 +40,8 @@ actualEndTime = datesList[29].to_datetime()
 actualEndTime = str(actualEndTime)[0:10]
 
 for code, stockRow in all_stock.iterrows():
-    print("开始统计"+code)
+    print("statistic "+code)
+    #print(stockRow)
     try:
         stockInfo = ts.get_h_data(code, \
                                 start = str(datesList[0].to_datetime()), \
@@ -56,8 +57,8 @@ for code, stockRow in all_stock.iterrows():
             file_result.write(code + "获取数据错误")
             continue
     if (stockInfo is None or stockInfo.empty):
-        print(code + "停牌")
-        file_result.write(code + "停牌")
+        print(code + "suspendion")
+        file_result.write(code + "suspendion")
         file_result.write("\n")
         continue
     dayCnt = 0
@@ -70,17 +71,28 @@ for code, stockRow in all_stock.iterrows():
     lastDate = ''
     lastPrice = 0
     isGetLastDate = False
+    volumeDayCnt = 0
+    maxVolumePercent = 0
+    volumePercnt = 0
+    stockInfo = stockInfo.sort_index(ascending=False)
     for date, stockInfoRow in stockInfo.iterrows():
+        #print('时间')
+        #print(date)
+        #print(stockInfoRow)
+        if(volumeDayCnt < 5):
+            volumePercent = (float(stockInfoRow["volume"] * 100) / float(stockRow["outstanding"] * 10000)) * 100
+            maxVolumePercent = max(maxVolumePercent, volumePercent)
+            volumeDayCnt += 1
         if(stockInfoRow is None):
-            print(code + "在日期" + date + "停牌")
-            file_result.write(code + "在日期" + date + "停牌")
+            print(code + "at " + date + " suspendion")
+            file_result.write(code + "at " + date + " suspendion")
             file_result.write("\n")
             idx += 1
             continue
         curPrice = int(stockInfoRow["close"] * 100) 
         if(curPrice == 0):
-            print(code + "在日期" + date + "停牌")
-            file_result.write(code + "在日期" + date + "停牌")
+            print(code + "at " + date + " suspendion")
+            file_result.write(code + "at " + date + " suspendion")
             file_result.write("\n")
             idx += 1
             continue
@@ -101,7 +113,7 @@ for code, stockRow in all_stock.iterrows():
             ma20 = int(sumPrice / 20)
     #print("dayCnt:" + str(dayCnt) + "cruPrice:" + str(lastPrice) + "sumPrice" + str(sumPrice))
     if(dayCnt < 5):
-        print(code + "开市时间不足5天")
+        print(code + "not enough trading data(at least 5 days)")
         file_result.write(code + "开市时间不足5天")
         file_result.write("\n")
         continue
@@ -123,14 +135,14 @@ for code, stockRow in all_stock.iterrows():
     #      "    ma10" + str(maDiffPercent10) + \
     #      "    ma20" + str(maDiffPercent20))
          
-    curStatus = "正常"
+    curStatus = "normal"
     #print(lastDate)
     #print(formatCurTime)
     #print(actualEndTime)
     if(lastDate != actualEndTime):
-        curStatus = "停牌"
+        curStatus = "suspendion"
           
-    spamwriter.writerow([code, maDiffPercent5, maDiffPercent10, maDiffPercent20, dayCnt, curStatus.decode('utf-8').encode('gb2312')])
+    spamwriter.writerow([code, maDiffPercent5, maDiffPercent10, maDiffPercent20, dayCnt, curStatus, maxVolumePercent])
     
     file_result.write(code + "    ")
     file_result.write(str(maDiffPercent5) + "    ")
