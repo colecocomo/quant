@@ -57,8 +57,8 @@ for code, stockRow in all_stock.iterrows():
             file_result.write(code + "获取数据错误")
             continue
     if (stockInfo is None or stockInfo.empty):
-        print(code + "suspendion")
-        file_result.write(code + "suspendion")
+        print(code + " suspendion")
+        file_result.write(code + " suspendion")
         file_result.write("\n")
         continue
     dayCnt = 0
