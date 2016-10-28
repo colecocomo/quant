@@ -28,7 +28,7 @@ for indexH, rowH in dfHistory.iterrows():
     
 for index, row in df.iterrows():
     print(row[6])
-    #spamwriter.writerow([row[0], row[1], row[2], row[3], row[4], row[5], row[6].encode('gbk')])
+    spamwriter.writerow([row[0], row[1], row[2], row[3], row[4], row[5], row[6].encode('gbk')])
     if row[6] == '买盘'.decode('utf-8'):
         total += row[5]
     if row[6] == '卖盘'.decode('utf-8'):
@@ -37,7 +37,7 @@ for index, row in df.iterrows():
         neutral += row[5]
 print("total:" + str(total) + "neutral:" + str(neutral))
 
-df1 =ts.get_tick_data('002219',date='2016-07-18')
+df1 =ts.get_tick_data('002219',date='2016-09-28')
 total1 = 0
 neutral1 = 0
 for index1, row1 in df1.iterrows():
