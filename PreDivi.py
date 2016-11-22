@@ -9,7 +9,7 @@ import tushare as ts
 import csv
 import codecs
 
-preDivi_csv = codecs.open('PreDiviResult.csv', 'wb+', 'utf-8')
+preDivi_csv = open('PreDiviResult.csv', 'wb+')
 spamwriter = csv.writer(preDivi_csv,dialect='excel')
 spamwriter.writerow(['stock', 'name', 'year', 'report_date', "divi", "shares"])
 
