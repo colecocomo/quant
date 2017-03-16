@@ -23,7 +23,7 @@ def floatToStr(value, num):
 
 file_csv = open('Trend.csv', 'wb+')
 spam_writer = csv.writer(file_csv, dialect='excel')
-spam_writer.writerow(['code'])
+spam_writer.writerow(['code', 'mask', 'detail'])
 
 TrendNone = 0
 TrendUp = 1
@@ -35,11 +35,11 @@ allStock = ts.get_stock_basics()
 endTime = time.localtime(time.time() - 86400)
 formatEndTime = time.strftime("%Y-%m-%d", endTime)
 periodsNum = 120
+CombineSlice = 0.050000
 dates = pd.bdate_range(end=formatEndTime, periods=periodsNum, freq="B")
 datesList = dates.tolist()
 
 for code, stockRow in allStock.iterrows():
-    print code
     stockInfo = ts.get_k_data(code,
                               start=str(datesList[0])[0:10],
                               end=str(datesList[periodsNum-1])[0:10])
@@ -76,7 +76,8 @@ for code, stockRow in allStock.iterrows():
         if _oldTrend != _trend:
             _trendPoint = {"TrendType": TrendStringDic[_oldTrend], "TrendBegin": _trendBegin,
                            "TrendEnd": _lastClose, "TrendDay": _trendDay,
-                           "TrendPercent": floatToStr(((_lastClose - _trendBegin) * 100 / _trendBegin), 2) + "%"}
+                           "TrendPercent": ((_lastClose - _trendBegin) * 100 / _trendBegin),
+                           "TrendPercentStr": floatToStr(((_lastClose - _trendBegin) * 100 / _trendBegin), 2) + "%"}
             _trendList.append(_trendPoint)
 
             _trendBegin = _lastClose
@@ -86,59 +87,106 @@ for code, stockRow in allStock.iterrows():
             _lastClose = close
 
     print "begin: " + str(_trendList.__len__())
-    print _trendList
+    # print _trendList
     _iterIdx = 0
-    while (_iterIdx < _trendList.__len__() - 1) and (_trendList.__len__() > 1):
-        _trendTmp1 = _trendList[_iterIdx]
-        _trendTmp2 = _trendList[_iterIdx + 1]
-
-        _trendTmpBegin1 = _trendTmp1["TrendBegin"]
-        _trendTmpEnd1 = _trendTmp1["TrendEnd"]
-        _trendTmpDay1 = _trendTmp1["TrendDay"]
-        _trendTmpType1 = _trendTmp1["TrendType"]
-        _trendTmpPercent1 = (_trendTmpEnd1 - _trendTmpBegin1) / _trendTmpBegin1
-
-        _trendTmpBegin2 = _trendTmp2["TrendBegin"]
-        _trendTmpEnd2 = _trendTmp2["TrendEnd"]
-        _trendTmpDay2 = _trendTmp2["TrendDay"]
-        _trendTmpType2 = _trendTmp2["TrendType"]
-        _trendTmpPercent2 = (_trendTmpEnd2 - _trendTmpBegin2) / _trendTmpBegin2
-
-        if math.fabs(_trendTmpPercent1) < 0.050000:
-            if math.fabs(_trendTmpPercent1) < math.fabs(_trendTmpPercent2):
-                _trendList[_iterIdx + 1] = {"TrendType": _trendTmpType2,
-                                            "TrendBegin": _trendTmpBegin1,
-                                            "TrendEnd": _trendTmpEnd2,
-                                            "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
-                                            "TrendPercent":
-                                                floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
-                                                           2) + "%"}
-                del _trendList[_iterIdx]
-            else:
-                _trendList[_iterIdx] = {"TrendType": _trendTmpType1,
-                                        "TrendBegin": _trendTmpBegin1,
-                                        "TrendEnd": _trendTmpEnd2,
-                                        "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
-                                        "TrendPercent":
-                                            floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
-                                                       2) + "%"}
-                del _trendList[_iterIdx + 1]
-
+    _combineMask = CombineSlice
+    if _trendList.__len__() > 8:
+        while _trendList.__len__() > 8:
             _iterIdx = 0
-        #elif math.fabs(_trendTmpPercent2) < 0.050000:
-        #    _trendList[_iterIdx] = {"TrendType": _trendTmpType1,
-        #                            "TrendBegin": _trendTmpBegin1,
-        #                            "TrendEnd": _trendTmpEnd2,
-        #                            "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
-        #                            "TrendPercent":
-        #                                floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
-        #                                           2) + "%"}
-        #    del _trendList[_iterIdx + 1]
-        #    _iterIdx -= 1
-        else:
-            _iterIdx += 1
+            while _iterIdx < _trendList.__len__() - 1:
+                _trendTmp1 = _trendList[_iterIdx]
+                _trendTmp2 = _trendList[_iterIdx + 1]
+
+                _trendTmpBegin1 = _trendTmp1["TrendBegin"]
+                _trendTmpEnd1 = _trendTmp1["TrendEnd"]
+                _trendTmpDay1 = _trendTmp1["TrendDay"]
+                _trendTmpType1 = _trendTmp1["TrendType"]
+                _trendTmpPercent1 = (_trendTmpEnd1 - _trendTmpBegin1) / _trendTmpBegin1
+
+                _trendTmpBegin2 = _trendTmp2["TrendBegin"]
+                _trendTmpEnd2 = _trendTmp2["TrendEnd"]
+                _trendTmpDay2 = _trendTmp2["TrendDay"]
+                _trendTmpType2 = _trendTmp2["TrendType"]
+                _trendTmpPercent2 = (_trendTmpEnd2 - _trendTmpBegin2) / _trendTmpBegin2
+
+                if math.fabs(_trendTmpPercent1) < _combineMask:
+                    if math.fabs(_trendTmpPercent1) < math.fabs(_trendTmpPercent2):
+                        _trendList[_iterIdx + 1] = {"TrendType": _trendTmpType2,
+                                                    "TrendBegin": _trendTmpBegin1,
+                                                    "TrendEnd": _trendTmpEnd2,
+                                                    "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
+                                                    "TrendPercent": ((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
+                                                    "TrendPercentStr":
+                                                        floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
+                                                                   2) + "%"}
+                        del _trendList[_iterIdx]
+                    else:
+                        _trendList[_iterIdx] = {"TrendType": _trendTmpType1,
+                                                "TrendBegin": _trendTmpBegin1,
+                                                "TrendEnd": _trendTmpEnd2,
+                                                "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
+                                                "TrendPercent": ((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
+                                                "TrendPercentStr":
+                                                    floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
+                                                               2) + "%"}
+                        del _trendList[_iterIdx + 1]
+
+                    _iterIdx = 0
+                # elif math.fabs(_trendTmpPercent2) < _combineMask:
+                #    _trendList[_iterIdx] = {"TrendType": _trendTmpType1,
+                #                            "TrendBegin": _trendTmpBegin1,
+                #                            "TrendEnd": _trendTmpEnd2,
+                #                            "TrendDay": (_trendTmpDay1 + _trendTmpDay2),
+                #                            "TrendPercent":
+                #                                floatToStr(((_trendTmpEnd2 - _trendTmpBegin1) * 100 / _trendTmpBegin1),
+                #                                           2) + "%"}
+                #    del _trendList[_iterIdx + 1]
+                #    _iterIdx -= 1
+                else:
+                    _iterIdx += 1
+            _combineMask += CombineSlice
+            print "_combineMask is: " + str(_combineMask)
     print "end: " + str(_trendList.__len__())
-    print _trendList
+    # print _trendList
+    _iterIdx = 0
+    _mask = 0
+    _lastTrendPercent = 0
+    _lastTrendMask = 0
+    _detailStr = ''
+    while _iterIdx < _trendList.__len__():
+        _trendValue = _trendList[_iterIdx]
+        _percent = _trendValue["TrendPercent"]
+        _detailStr += (_trendValue["TrendType"] + ' ' +
+                       _trendValue["TrendPercentStr"] + ' ' +
+                       str(_trendValue["TrendBegin"]) + ' ' +
+                       str(_trendValue["TrendEnd"]) + '\r\n')
+
+        if _isFirst:
+            if _percent > 0.001:
+                _lastTrendMask = TrendUp
+            elif _percent < -0.001:
+                _lastTrendMask = TrendDown
+            _lastTrendPercent = TrendDown
+            _mask = _mask * math.pow(10, 1) + _lastTrendMask
+            _isFirst = False
+        else:
+            if math.fabs(_percent) < (math.fabs(_lastTrendPercent) * 0.3):
+                _mask = _mask * math.pow(10, 1) + _lastTrendMask
+            else:
+                if _percent > 0.001:
+                    _lastTrendMask = TrendUp
+                elif _percent < -0.001:
+                    _lastTrendMask = TrendDown
+                _mask = _mask * math.pow(10, 1) + _lastTrendMask
+            _lastTrendPercent = _percent
+
+        _iterIdx += 1
+    spam_writer.writerow([code, _mask, _detailStr])
+    print str(code) + " mask is: " + str(_mask)
+
+file_csv.close()
+
+
 
 
 
