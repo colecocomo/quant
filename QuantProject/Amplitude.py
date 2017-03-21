@@ -29,7 +29,7 @@ allStock = ts.get_stock_basics()
 
 endTime = time.localtime(time.time() - 86400)
 formatEndTime = time.strftime("%Y-%m-%d", endTime)
-periodsNum = 60
+periodsNum = 1
 dates = pd.bdate_range(end=formatEndTime, periods=periodsNum, freq="B")
 datesList = dates.tolist()
 

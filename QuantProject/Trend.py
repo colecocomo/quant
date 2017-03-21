@@ -10,6 +10,7 @@ import pandas as pd
 import time
 import csv
 import math
+import re
 
 
 def floatToStr(value, num):
@@ -23,16 +24,17 @@ def floatToStr(value, num):
 
 file_csv = open('Trend.csv', 'wb+')
 spam_writer = csv.writer(file_csv, dialect='excel')
-spam_writer.writerow(['code', 'mask', 'detail'])
+spam_writer.writerow(['code', 'mask', 'detail', "growth"])
 
 TrendNone = 0
 TrendUp = 1
 TrendDown = 2
+TotalQuarter = 4
 TrendStringDic = {TrendNone: "无", TrendUp: "Up", TrendDown: "Down"}
 
 allStock = ts.get_stock_basics()
 
-endTime = time.localtime(time.time() - 86400)
+endTime = time.localtime(time.time() - 0)
 formatEndTime = time.strftime("%Y-%m-%d", endTime)
 periodsNum = 120
 CombineSlice = 0.050000
@@ -54,8 +56,6 @@ for code, stockRow in allStock.iterrows():
     _trendDay = 0
     for idx, infoRow in stockInfo.iterrows():
         close = float(infoRow[2])
-        high = float(infoRow[3])
-        low = float(infoRow[4])
         _trendDay += 1
 
         if _isFirst:
@@ -149,7 +149,7 @@ for code, stockRow in allStock.iterrows():
     print "end: " + str(_trendList.__len__())
     # print _trendList
     _iterIdx = 0
-    _mask = 0
+    _mask = 0L
     _lastTrendPercent = 0
     _lastTrendMask = 0
     _detailStr = ''
@@ -181,8 +181,48 @@ for code, stockRow in allStock.iterrows():
             _lastTrendPercent = _percent
 
         _iterIdx += 1
-    spam_writer.writerow([code, _mask, _detailStr])
-    print str(code) + " mask is: " + str(_mask)
+    if re.match("^.{4,}", str(int(_mask))):
+        if re.match("^.?2{3,}(1)?$", str(int(_mask))) or \
+           re.match("^.{2,}2{4,}(1)?$", str(int(_mask))):
+            print str(code) + "\'s valid mask is: " + str(int(_mask))
+        else:
+            print "Invalid trend mask: " + str(int(_mask))
+            continue
+    else:
+        print "Invalid trend mask: " + str(int(_mask))
+        continue
+
+    _quarterIdx = 0
+    _yearNow = int(formatEndTime[0:4])
+    _monthNow = int(formatEndTime[5:7])
+    _curQuarter = int(_monthNow / 4) + 1
+    _growthStr = ""
+    while _quarterIdx < TotalQuarter:
+        print str(_yearNow) + "-" + str(_curQuarter)
+        try:
+            _growth = ts.get_growth_data(_yearNow, _curQuarter)
+        except Exception, e:
+            if _curQuarter == 1:
+                _yearNow -= 1
+                _curQuarter = 4
+            else:
+                _curQuarter -= 1
+            continue
+        if _growth is None:
+            if _curQuarter == 1:
+                _yearNow -= 1
+                _curQuarter = 4
+            else:
+                _curQuarter -= 1
+            continue
+        else:
+            _growthStr += (str(_yearNow) + "-" + str(_curQuarter) + ": " +
+                           "mbrg: " + str(_growth[code][2]) + "% " +
+                           "nprg: " + str(_growth[code][3]) + "% " +
+                           "epsg: " + str(_growth[code][6]) + "% " + '\r\n')
+            _quarterIdx += 1
+    spam_writer.writerow([code, _mask, _detailStr, _growthStr])
+
 
 file_csv.close()
 
