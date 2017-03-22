@@ -41,6 +41,51 @@ CombineSlice = 0.050000
 dates = pd.bdate_range(end=formatEndTime, periods=periodsNum, freq="B")
 datesList = dates.tolist()
 
+yearNow = int(formatEndTime[0:4])
+monthNow = int(formatEndTime[5:7])
+curQuarter = int(monthNow / 4) + 1
+
+quarterIdx = 0
+yearList = [0, 0, 0, 0]
+quarterList = [0, 0, 0, 0]
+growthList = [0, 0, 0, 0]
+while quarterIdx < TotalQuarter:
+    print str(yearNow) + "-" + str(curQuarter)
+    try:
+        _growth = ts.get_growth_data(yearNow, curQuarter)
+    except Exception, e:
+        try:
+            _growth = ts.get_growth_data(yearNow, curQuarter)
+        except Exception, e1:
+            if curQuarter == 1:
+                yearNow -= 1
+                curQuarter = 4
+            else:
+                curQuarter -= 1
+            continue
+    if _growth is None:
+        if curQuarter == 1:
+            yearNow -= 1
+            curQuarter = 4
+        else:
+            curQuarter -= 1
+        continue
+    else:
+        _growth.fillna(0)
+        yearList[quarterIdx] = yearNow
+        quarterList[quarterIdx] = curQuarter
+        growthList[quarterIdx] = _growth.copy()
+        # print growthList[quarterIdx].head(10)
+        quarterIdx += 1
+        if curQuarter == 1:
+            yearNow -= 1
+            curQuarter = 4
+        else:
+            curQuarter -= 1
+        # print '------------new---line----------------------'
+# print yearList
+# print quarterList
+
 for code, stockRow in allStock.iterrows():
     stockInfo = ts.get_k_data(code,
                               start=str(datesList[0])[0:10],
@@ -193,34 +238,26 @@ for code, stockRow in allStock.iterrows():
         continue
 
     _quarterIdx = 0
-    _yearNow = int(formatEndTime[0:4])
-    _monthNow = int(formatEndTime[5:7])
-    _curQuarter = int(_monthNow / 4) + 1
     _growthStr = ""
     while _quarterIdx < TotalQuarter:
-        print str(_yearNow) + "-" + str(_curQuarter)
-        try:
-            _growth = ts.get_growth_data(_yearNow, _curQuarter)
-        except Exception, e:
-            if _curQuarter == 1:
-                _yearNow -= 1
-                _curQuarter = 4
-            else:
-                _curQuarter -= 1
-            continue
-        if _growth is None:
-            if _curQuarter == 1:
-                _yearNow -= 1
-                _curQuarter = 4
-            else:
-                _curQuarter -= 1
-            continue
-        else:
-            _growthStr += (str(_yearNow) + "-" + str(_curQuarter) + ": " +
-                           "mbrg: " + str(_growth[code][2]) + "% " +
-                           "nprg: " + str(_growth[code][3]) + "% " +
-                           "epsg: " + str(_growth[code][6]) + "% " + '\r\n')
-            _quarterIdx += 1
+        _isFind = False
+        for idx, growthRow in growthList[_quarterIdx].iterrows():
+            if growthRow[0] == code:
+                _growthStr += (str(yearList[_quarterIdx]) + "-" +
+                               str(quarterList[_quarterIdx]) + ": " +
+                               "mbrg: " + str(growthRow[2]) + "% " +
+                               "nprg: " + str(growthRow[3]) + "% " +
+                               "epsg: " + str(growthRow[6]) + "% " + '\r\n')
+                _isFind = True
+                break
+        if not _isFind:
+            _growthStr += (str(yearList[_quarterIdx]) + "-" +
+                           str(quarterList[_quarterIdx]) + ": " +
+                           "mbrg: unknown   " +
+                           "nprg: unknown   " +
+                           "epsg: unknown   " + '\r\n')
+        _quarterIdx += 1
+
     spam_writer.writerow([code, _mask, _detailStr, _growthStr])
 
 
