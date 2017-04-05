@@ -23,7 +23,7 @@ formatCurTime = ""
 if curTime.tm_hour >= 16:
     formatCurTime = time.strftime("%Y%m%d", curTime)
 else:
-    formatCurTime = time.strftime("%Y%m%d", time.localtime(time.time() - 86400))
+    formatCurTime = time.strftime("%Y%m%d", time.localtime(time.time() - 0))
 print formatCurTime
 isCurDay = True
 if os.path.exists(".\\" + formatCurTime):
@@ -50,10 +50,11 @@ while isCurDay:
         _downloadLinkStr = (downloadLinkPre_SJS + _contentDetail[:_encodeKeywordIdx] +
                             _fileNameArray[0] + "%3B" + _fileNameArray[1])
         print _downloadLinkStr
-        _rsp, _fileContent = req.get(_downloadLinkStr)
-        if _rsp['status'] == '200':
+        _rsp = req.get(_downloadLinkStr)
+        print _rsp
+        if _rsp.status_code == 200:
             with open(".\\" + formatCurTime + "\\" + _fileNameArray[0] + ".txt", 'wb') as f:
-                f.write(_fileContent)
+                f.write(_rsp.content)
         _contentDetail = _contentDetailFileName[(_endIdx + downloadEnd_SJS.__len__()):]
         _downloadKeywordIdx = _contentDetail.find(downloadKeyword_SJS)
     pageIdx += 1
