@@ -7,10 +7,20 @@ Created on Mar. 23 13:49:39 2017
 
 import tushare as ts
 import requests as req
-import time
 import os
 from xml.dom.minidom import parse
 import xml.dom.minidom
+import time
+import pandas as pd
+
+
+def floatToStr(value, num):
+    """
+
+    :param value:
+    :return:
+    """
+    return ("%." + str(num) + "f") % value
 
 
 class EtfInfo(object):
@@ -87,19 +97,8 @@ headers = {
 # _tmp = req.get(tmp, data=json.dumps(tmp1), headers=headers)
 
 pageIdx = 1
-curTime = time.localtime(time.time())
-formatCurTime = ""
-if curTime.tm_hour >= 15:
-    formatCurTime = time.strftime("%Y%m%d", curTime)
-else:
-    formatCurTime = time.strftime("%Y%m%d", time.localtime(time.time() - 86400))
-print formatCurTime
 isCurDay = True
-if os.path.exists(".\\" + formatCurTime):
-    # os.remove(".\\" + formatCurTime)
-    isCurDay = True
-else:
-    os.mkdir(".\\" + formatCurTime)
+curNewFileTime = ""
 while isCurDay:
     _pageContent = req.get(requestUrl_SJS + str(pageIdx))
     _contentDetail = _pageContent.text
@@ -113,16 +112,20 @@ while isCurDay:
         _fileName = _contentDetailFileName[:_endIdx]
         _fileNameArray = _fileName.split(";")
         _fileDateTime = _fileNameArray[0].split("_")[2]
-        if _fileDateTime != formatCurTime:
+        if curNewFileTime == "":
+            curNewFileTime = _fileDateTime
+            if not os.path.exists(".\\" + curNewFileTime):
+                os.mkdir(".\\" + curNewFileTime)
+        if _fileDateTime != curNewFileTime:
             isCurDay = False
             break
         _downloadLinkStr = (downloadLinkPre_SJS + _contentDetail[:_encodeKeywordIdx] +
                             _fileNameArray[0] + "%3B" + _fileNameArray[1])
-        print _downloadLinkStr
+        # print _downloadLinkStr
         _rsp = req.get(_downloadLinkStr)
-        print _rsp
+        # print _rsp
         if _rsp.status_code == 200:
-            with open(".\\" + formatCurTime + "\\" + _fileNameArray[0] + ".txt", 'wb') as f:
+            with open(".\\" + curNewFileTime + "\\" + _fileNameArray[0] + ".txt", 'wb') as f:
                 f.write(_rsp.content)
         _contentDetail = _contentDetailFileName[(_endIdx + downloadEnd_SJS.__len__()):]
         _downloadKeywordIdx = _contentDetail.find(downloadKeyword_SJS)
@@ -130,10 +133,10 @@ while isCurDay:
     print "pageidx: " + str(pageIdx)
 
 EtfList = []
-if os.path.exists(".\\" + formatCurTime):
-    _fileList = os.listdir(".\\" + formatCurTime)
+if os.path.exists(".\\" + curNewFileTime):
+    _fileList = os.listdir(".\\" + curNewFileTime)
     for i in range(0, _fileList.__len__()):
-        _filePath = os.path.join(".\\" + formatCurTime + "\\", _fileList[i])
+        _filePath = os.path.join(".\\" + curNewFileTime + "\\", _fileList[i])
         if os.path.isfile(_filePath):
             _pcfFile = open(_filePath, "r")
             _isSHJS = (_filePath.find(".ETF") != -1)
@@ -239,9 +242,17 @@ if os.path.exists(".\\" + formatCurTime):
                                            _componentPremiumRatioDic, _componentCashDic))
                 _pcfFile.close()
 
+endTime = time.localtime(time.time())
+formatEndTime = time.strftime("%Y-%m-%d", endTime)
+periodsNum = 300
+dates = pd.bdate_range(end=formatEndTime, periods=periodsNum, freq="B")
+datesList = dates.tolist()
+
 while True:
     for etfIdx in EtfList:
         _totalCost = .0
+        _emptyComponentPrice = False
+        _componentPremiumCnt = 0
         for _componentIdx in etfIdx.componentID:
             if etfIdx.componentSubstituteFlagDic[_componentIdx] == "2":
                 # print str(componentIdx) + "cash is: " + componentCashDic[componentIdx]
@@ -249,14 +260,37 @@ while True:
             else:
                 tickData = ts.get_realtime_quotes(_componentIdx)
                 price = float(tickData.iloc[0][3])
-                '''
-                print str(componentIdx) + " Price is: " + str(price) + " Num is: " + \
-                    componentNumDic[componentIdx] + " Total is: " + \
-                    str(price * int(componentNumDic[componentIdx]))
-                '''
+                if (price < 0.00001) and (price > -0.00001):
+                    historyData = ts.get_k_data(_componentIdx, end=str(datesList[periodsNum - 1])[0:10],
+                                                start=str(datesList[0])[0:10])
+                    historyData = historyData.sort(columns='date', ascending=False)
+                    _componentPremiumCnt += 1
+                    try:
+                        price = (float(historyData.iloc[0][2]) *
+                                 (float(etfIdx.componentPremiumRatioDic[_componentIdx]) + 1.0))
+                    except Exception,e:
+                        _emptyComponentPrice = True
+                        break
                 _totalCost += (price * float(etfIdx.componentNumDic[_componentIdx]))
+                # print "component code" + _componentIdx + " price is: " + str(price)
+        if _emptyComponentPrice:
+            continue
         _price1 = _totalCost / etfIdx.creationRedemptionUnit
-        _tmp = ts.get_realtime_quotes(_componentIdx)
+        print "etf code: " + etfIdx.etfCode
+        try:
+            _tmp = ts.get_realtime_quotes(etfIdx.etfCode)
+        except Exception,e:
+            print "etf code: " + etfIdx.etfCode + " get_realtime_quotes error"
+            continue
+        # print _tmp
         _price2 = _tmp.iloc[0][3]
-        print (etfIdx.etfName + "(" + etfIdx.etfCode + ")" + " Price1 is: " + str(_price1) +
-               " | Price2 is: " + str(_price2))
+        _priceRatio = (float(_price2) - _price1) / _price1
+        _descStr = ""
+        if _priceRatio > 0.00001:
+            _descStr = "Premium:" + floatToStr(_priceRatio * 100, 3) + "%"
+        else:
+            _descStr = "Discount:" + floatToStr(_priceRatio * 100, 3) + "%"
+        _descStr += ("Component Premium Cnt is:" + str(_componentPremiumCnt))
+        _descStr += " Price1 is: " + str(_price1)
+        _descStr += " | Price2 is: " + str(_price2)
+        print etfIdx.etfName + "(" + etfIdx.etfCode + ") " + _descStr
