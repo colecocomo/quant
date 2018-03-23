@@ -54,12 +54,11 @@ while _idx < g_statistics_day:
 amount_trend_csv = open('./ClassifyHistory/AmountTrend.csv', 'wb+')
 amount_trend_csv.writelines(['code', 'date', 'amount', 'amount_percent\n'])
 for _code in _amount_dict.keys():
-    _list_idx = len(_amount_dict[_code])
+    _list_idx = len(_amount_dict[_code]) - 1
     _amount_content_str = "%06d" % _code + ','
     while _list_idx >= 0:
-        _amount_content = _amount_dict[_code][_list_idx - 1]
-        _amount_content_str += _amount_content['date'] + ',' + str(_amount_content['amount']) + \
-                              ',' + str(_amount_content['amount_percent'])
+        _amount_content = _amount_dict[_code][_list_idx]
+        _amount_content_str += str(_amount_content['amount']) + ','
         if _list_idx != 0:
             _amount_content_str += ','
         else:
@@ -67,5 +66,21 @@ for _code in _amount_dict.keys():
         _list_idx -= 1
     amount_trend_csv.writelines(_amount_content_str)
 amount_trend_csv.close()
+
+amount_percent_trend_csv = open('./ClassifyHistory/AmountPercentTrend.csv', 'wb+')
+amount_percent_trend_csv.writelines(['code', 'date', 'amount', 'amount_percent\n'])
+for _code in _amount_dict.keys():
+    _list_idx = len(_amount_dict[_code]) - 1
+    _amount_content_str = "%06d" % _code + ','
+    while _list_idx >= 0:
+        _amount_content = _amount_dict[_code][_list_idx]
+        _amount_content_str += str(_amount_content['amount_percent']) + ','
+        if _list_idx != 0:
+            _amount_content_str += ','
+        else:
+            _amount_content_str += '\n'
+        _list_idx -= 1
+        amount_percent_trend_csv.writelines(_amount_content_str)
+amount_percent_trend_csv.close()
 
 
