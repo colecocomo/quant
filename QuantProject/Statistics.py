@@ -80,13 +80,13 @@ for index, classifyRow in classify.iterrows():
         amount_percent = amount * 100 / (cy_amount * _100_m)
     else:
         amount_percent = amount * 100 / (sz_amount * _100_m)
-    amount_string = ''
+    '''amount_string = ''
     if amount >= _100_m:
         amount_string = "%.02f" % (amount / _100_m) + " 亿"
     else:
-        amount_string = "%.02f" % (amount / 10000) + " 万"
+        amount_string = "%.02f" % (amount / 10000) + " 万"'''
     spam_writer.writerow([code, stock_name,
-                          classify_name, growth, amount_string.decode('utf-8').encode('gbk'),
+                          classify_name, growth, amount,
                           "%.03f" % (amount_percent)])
 
     # print code + classifyRow["c_name"] + str(growth) + "%.02f" % (amount_percent)
